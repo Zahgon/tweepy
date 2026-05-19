@@ -107,22 +107,8 @@ class MemoryCache(Cache):
         finally:
             self.lock.release()
 
-    def count(self):
-        return len(self._entries)
 
-    def cleanup(self):
-        self.lock.acquire()
-        try:
-            for k, v in dict(self._entries).items():
-                if self._is_expired(v, self.timeout):
-                    del self._entries[k]
-        finally:
-            self.lock.release()
 
-    def flush(self):
-        self.lock.acquire()
-        self._entries.clear()
-        self.lock.release()
 
 
 class FileCache(Cache):
@@ -158,35 +144,11 @@ class FileCache(Cache):
         md5.update(key.encode('utf-8'))
         return os.path.join(self.cache_dir, md5.hexdigest())
 
-    def _lock_file_dummy(self, path, exclusive=True):
-        return None
 
-    def _unlock_file_dummy(self, lock):
-        return
 
-    def _lock_file_posix(self, path, exclusive=True):
-        lock_path = path + '.lock'
-        if exclusive is True:
-            f_lock = open(lock_path, 'w')
-            fcntl.lockf(f_lock, fcntl.LOCK_EX)
-        else:
-            f_lock = open(lock_path, 'r')
-            fcntl.lockf(f_lock, fcntl.LOCK_SH)
-        if os.path.exists(lock_path) is False:
-            f_lock.close()
-            return None
-        return f_lock
 
-    def _unlock_file_posix(self, lock):
-        lock.close()
 
-    def _lock_file_win32(self, path, exclusive=True):
-        # TODO: implement
-        return None
 
-    def _unlock_file_win32(self, lock):
-        # TODO: implement
-        return
 
     def _delete_file(self, path):
         os.remove(path)
@@ -242,25 +204,8 @@ class FileCache(Cache):
         finally:
             self.lock.release()
 
-    def count(self):
-        c = 0
-        for entry in os.listdir(self.cache_dir):
-            if entry.endswith('.lock'):
-                continue
-            c += 1
-        return c
 
-    def cleanup(self):
-        for entry in os.listdir(self.cache_dir):
-            if entry.endswith('.lock'):
-                continue
-            self._get(os.path.join(self.cache_dir, entry), None)
 
-    def flush(self):
-        for entry in os.listdir(self.cache_dir):
-            if entry.endswith('.lock'):
-                continue
-            self._delete_file(os.path.join(self.cache_dir, entry))
 
 
 class MemCacheCache(Cache):
@@ -361,7 +306,7 @@ class RedisCache(Cache):
         """Note: This is not very efficient,
         since it retrieves all the keys from the redis
         server to know how many keys we have"""
-        return len(self.client.smembers(self.keys_container))
+        pass
 
     def delete_entry(self, key):
         """Delete an object from the redis table"""
@@ -372,19 +317,11 @@ class RedisCache(Cache):
 
     def cleanup(self):
         """Cleanup all the expired keys"""
-        keys = self.client.smembers(self.keys_container)
-        for key in keys:
-            entry = self.client.get(key)
-            if entry:
-                entry = pickle.loads(entry)
-                if self._is_expired(entry, self.timeout):
-                    self.delete_entry(key)
+        pass
 
     def flush(self):
         """Delete all entries from the cache"""
-        keys = self.client.smembers(self.keys_container)
-        for key in keys:
-            self.delete_entry(key)
+        pass
 
 
 class MongodbCache(Cache):
@@ -412,8 +349,6 @@ class MongodbCache(Cache):
         if obj:
             return pickle.loads(obj['value'])
 
-    def count(self):
-        return self.col.find({}).count()
 
     def delete_entry(self, key):
         return self.col.remove({'_id': key})
@@ -422,6 +357,3 @@ class MongodbCache(Cache):
         """MongoDB will automatically clear expired keys."""
         pass
 
-    def flush(self):
-        self.col.drop()
-        self.col.create_index('created', expireAfterSeconds=self.timeout)

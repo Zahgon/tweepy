@@ -61,24 +61,8 @@ class ResultSet(list):
         self._max_id = max_id
         self._since_id = since_id
 
-    @property
-    def max_id(self):
-        if self._max_id:
-            return self._max_id
-        ids = self.ids()
-        # Max_id is always set to the *smallest* id, minus one, in the set
-        return (min(ids) - 1) if ids else None
 
-    @property
-    def since_id(self):
-        if self._since_id:
-            return self._since_id
-        ids = self.ids()
-        # Since_id is always set to the *greatest* id in the set
-        return max(ids) if ids else None
 
-    def ids(self):
-        return [item.id for item in self if hasattr(item, 'id')]
 
 
 class BoundingBox(Model):
@@ -99,7 +83,7 @@ class BoundingBox(Model):
         This assumes that bounding box is always a rectangle, which
         appears to be the case at present.
         """
-        return tuple(self.coordinates[0][0])
+        pass
 
     def corner(self):
         """
@@ -109,7 +93,7 @@ class BoundingBox(Model):
         This assumes that bounding box is always a rectangle, which
         appears to be the case at present.
         """
-        return tuple(self.coordinates[0][2])
+        pass
 
 
 class DirectMessage(Model):
@@ -188,29 +172,13 @@ class List(Model):
     def update(self, **kwargs):
         return self._api.update_list(list_id=self.id, **kwargs)
 
-    def destroy(self):
-        return self._api.destroy_list(list_id=self.id)
 
-    def timeline(self, **kwargs):
-        return self._api.list_timeline(list_id=self.id, **kwargs)
 
-    def add_member(self, id):
-        return self._api.add_list_member(list_id=self.id, user_id=id)
 
-    def remove_member(self, id):
-        return self._api.remove_list_member(list_id=self.id, user_id=id)
 
-    def members(self, **kwargs):
-        return self._api.get_list_members(list_id=self.id, **kwargs)
 
-    def subscribe(self):
-        return self._api.subscribe_list(list_id=self.id)
 
-    def unsubscribe(self):
-        return self._api.unsubscribe_list(list_id=self.id)
 
-    def subscribers(self, **kwargs):
-        return self._api.get_list_subscribers(list_id=self.id, **kwargs)
 
 
 class Media(Model):
@@ -286,8 +254,6 @@ class SavedSearch(Model):
                 setattr(ss, k, v)
         return ss
 
-    def destroy(self):
-        return self._api.destroy_saved_search(self.id)
 
 
 class SearchResults(ResultSet):
@@ -352,17 +318,9 @@ class Status(Model, HashableID):
                 setattr(status, k, v)
         return status
 
-    def destroy(self):
-        return self._api.destroy_status(self.id)
 
-    def retweet(self):
-        return self._api.retweet(self.id)
 
-    def retweets(self):
-        return self._api.get_retweets(self.id)
 
-    def favorite(self):
-        return self._api.create_favorite(self.id)
 
 
 class User(Model, HashableID):
@@ -398,39 +356,15 @@ class User(Model, HashableID):
             results.append(cls.parse(api, obj))
         return results
 
-    def timeline(self, **kwargs):
-        return self._api.user_timeline(user_id=self.id, **kwargs)
 
-    def friends(self, **kwargs):
-        return self._api.get_friends(user_id=self.id, **kwargs)
 
-    def followers(self, **kwargs):
-        return self._api.get_followers(user_id=self.id, **kwargs)
 
-    def follow(self):
-        self._api.create_friendship(user_id=self.id)
-        self.following = True
 
-    def unfollow(self):
-        self._api.destroy_friendship(user_id=self.id)
-        self.following = False
 
-    def list_memberships(self, *args, **kwargs):
-        return self._api.get_list_memberships(user_id=self.id, *args, **kwargs)
 
-    def list_ownerships(self, *args, **kwargs):
-        return self._api.get_list_ownerships(user_id=self.id, *args, **kwargs)
 
-    def list_subscriptions(self, *args, **kwargs):
-        return self._api.get_list_subscriptions(
-            user_id=self.id, *args, **kwargs
-        )
 
-    def lists(self, *args, **kwargs):
-        return self._api.get_lists(user_id=self.id, *args, **kwargs)
 
-    def follower_ids(self, *args, **kwargs):
-        return self._api.get_follower_ids(user_id=self.id, *args, **kwargs)
 
 
 class IDModel(Model):

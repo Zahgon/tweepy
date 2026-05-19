@@ -60,27 +60,7 @@ class Paginator:
         limit
             Maximum number of results to yield
         """
-        if limit <= 0:
-            return
-
-        count = 0
-        for response in PaginationIterator(
-            self.method, *self.args, **self.kwargs
-        ):
-            if isinstance(response, Response):
-                response_data = response.data or []
-            elif isinstance(response, dict):
-                response_data = response.get("data", [])
-            else:
-                raise RuntimeError(
-                    f"Paginator.flatten does not support the {type(response)} "
-                    f"return type for {self.method.__qualname__}"
-                )
-            for data in response_data:
-                yield data
-                count += 1
-                if count == limit:
-                    return
+        pass
 
 
 class PaginationIterator:

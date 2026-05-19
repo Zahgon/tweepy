@@ -51,61 +51,25 @@ class OAuth1UserHandler:
             resource_owner_secret=self.access_token_secret, decoding=None
         )
 
-    def _get_oauth_url(self, endpoint):
-        return 'https://api.twitter.com/oauth/' + endpoint
 
-    def _get_request_token(self, access_type=None):
-        try:
-            url = self._get_oauth_url('request_token')
-            if access_type:
-                url += f'?x_auth_access_type={access_type}'
-            return self.oauth.fetch_request_token(url)
-        except Exception as e:
-            raise TweepyException(e)
 
     def get_authorization_url(self, signin_with_twitter=False,
                               access_type=None):
         """Get the authorization URL to redirect the user to"""
-        try:
-            if signin_with_twitter:
-                url = self._get_oauth_url('authenticate')
-                if access_type:
-                    log.warning(WARNING_MESSAGE)
-            else:
-                url = self._get_oauth_url('authorize')
-            self.request_token = self._get_request_token(
-                access_type=access_type
-            )
-            return self.oauth.authorization_url(url)
-        except Exception as e:
-            raise TweepyException(e)
+        pass
 
     def get_access_token(self, verifier=None):
         """After user has authorized the app, get access token and secret with
         verifier
         """
-        try:
-            url = self._get_oauth_url('access_token')
-            self.oauth = OAuth1Session(
-                self.consumer_key, client_secret=self.consumer_secret,
-                resource_owner_key=self.request_token['oauth_token'],
-                resource_owner_secret=self.request_token['oauth_token_secret'],
-                verifier=verifier, callback_uri=self.callback
-            )
-            resp = self.oauth.fetch_access_token(url)
-            self.access_token = resp['oauth_token']
-            self.access_token_secret = resp['oauth_token_secret']
-            return self.access_token, self.access_token_secret
-        except Exception as e:
-            raise TweepyException(e)
+        pass
 
     def set_access_token(self, key, secret):
         """
         .. deprecated:: 4.5
             Set through initialization instead.
         """
-        self.access_token = key
-        self.access_token_secret = secret
+        pass
 
 
 class OAuthHandler(OAuth1UserHandler):
@@ -202,22 +166,10 @@ class OAuth2UserHandler(OAuth2Session):
 
     def get_authorization_url(self):
         """Get the authorization URL to redirect the user to"""
-        authorization_url, state = self.authorization_url(
-            "https://twitter.com/i/oauth2/authorize",
-            code_challenge=self._client.create_code_challenge(
-                self._client.create_code_verifier(128), "S256"
-            ), code_challenge_method="S256"
-        )
-        return authorization_url
+        pass
 
     def fetch_token(self, authorization_response):
         """After user has authorized the app, fetch access token with
         authorization response URL
         """
-        return super().fetch_token(
-            "https://api.twitter.com/2/oauth2/token",
-            authorization_response=authorization_response,
-            auth=self.auth,
-            include_client_id=True,
-            code_verifier=self._client.code_verifier
-        )
+        pass

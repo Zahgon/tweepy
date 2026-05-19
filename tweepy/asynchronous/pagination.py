@@ -61,28 +61,7 @@ class AsyncPaginator:
         limit
             Maximum number of results to yield
         """
-        if limit <= 0:
-            return
-
-        count = 0
-        async for response in AsyncPaginationIterator(
-            self.method, *self.args, **self.kwargs
-        ):
-            if isinstance(response, Response):
-                response_data = response.data or []
-            elif isinstance(response, dict):
-                response_data = response.get("data", [])
-            else:
-                raise RuntimeError(
-                    "AsyncPaginator.flatten does not support the "
-                    f"{type(response)} return type for "
-                    f"{self.method.__qualname__}"
-                )
-            for data in response_data:
-                yield data
-                count += 1
-                if count == limit:
-                    return
+        pass
 
 
 class AsyncPaginationIterator:

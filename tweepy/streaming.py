@@ -49,123 +49,11 @@ class BaseStream:
             f"Tweepy/{tweepy.__version__}"
         )
 
-    def _connect(
-        self, method, url, auth=None, params=None, headers=None, body=None,
-        timeout=21
-    ):
-        self.running = True
 
-        error_count = 0
-        # https://developer.twitter.com/en/docs/twitter-api/v1/tweets/filter-realtime/guides/connecting
-        # https://developer.twitter.com/en/docs/twitter-api/tweets/filtered-stream/integrate/handling-disconnections
-        # https://developer.twitter.com/en/docs/twitter-api/tweets/volume-streams/integrate/handling-disconnections
-        network_error_wait = 0
-        network_error_wait_step = 0.25
-        network_error_wait_max = 16
-        http_error_wait = http_error_wait_start = 5
-        http_error_wait_max = 320
-        http_429_error_wait_start = 60
-
-        self.session.headers["User-Agent"] = self.user_agent
-
-        try:
-            while self.running and error_count <= self.max_retries:
-                try:
-                    with self.session.request(
-                        method, url, params=params, headers=headers, data=body,
-                        timeout=timeout, stream=True, auth=auth,
-                        verify=self.verify, proxies=self.proxies
-                    ) as resp:
-                        if resp.status_code == 200:
-                            error_count = 0
-                            http_error_wait = http_error_wait_start
-                            network_error_wait = 0
-
-                            self.on_connect()
-                            if not self.running:
-                                break
-
-                            for line in resp.iter_lines(
-                                chunk_size=self.chunk_size
-                            ):
-                                if line:
-                                    self.on_data(line)
-                                else:
-                                    self.on_keep_alive()
-                                if not self.running:
-                                    break
-
-                            if resp.raw.closed:
-                                self.on_closed(resp)
-                        else:
-                            self.on_request_error(resp.status_code)
-                            if not self.running:
-                                break
-                            # The error text is logged here instead of in
-                            # on_request_error to keep on_request_error
-                            # backwards-compatible. In a future version, the
-                            # Response should be passed to on_request_error.
-                            log.error(
-                                "HTTP error response text: %s", resp.text
-                            )
-
-                            error_count += 1
-
-                            if resp.status_code in (420, 429):
-                                if http_error_wait < http_429_error_wait_start:
-                                    http_error_wait = http_429_error_wait_start
-
-                            sleep(http_error_wait)
-
-                            http_error_wait *= 2
-                            if http_error_wait > http_error_wait_max:
-                                http_error_wait = http_error_wait_max
-                except (requests.ConnectionError, requests.Timeout,
-                        requests.exceptions.ChunkedEncodingError,
-                        ssl.SSLError, urllib3.exceptions.ReadTimeoutError,
-                        urllib3.exceptions.ProtocolError) as exc:
-                    # This is still necessary, as a SSLError can actually be
-                    # thrown when using Requests
-                    # If it's not time out treat it like any other exception
-                    if isinstance(exc, ssl.SSLError):
-                        if not (exc.args and "timed out" in str(exc.args[0])):
-                            raise
-
-                    self.on_connection_error()
-                    if not self.running:
-                        break
-                    # The error text is logged here instead of in
-                    # on_connection_error to keep on_connection_error
-                    # backwards-compatible. In a future version, the error
-                    # should be passed to on_connection_error.
-                    log.error(
-                        "Connection error: %s",
-                        "".join(
-                            traceback.format_exception_only(type(exc), exc)
-                        ).rstrip()
-                    )
-
-                    sleep(network_error_wait)
-
-                    network_error_wait += network_error_wait_step
-                    if network_error_wait > network_error_wait_max:
-                        network_error_wait = network_error_wait_max
-        except Exception as exc:
-            self.on_exception(exc)
-        finally:
-            self.session.close()
-            self.running = False
-            self.on_disconnect()
-
-    def _threaded_connect(self, *args, **kwargs):
-        self.thread = Thread(target=self._connect, name="Tweepy Stream",
-                             args=args, kwargs=kwargs, daemon=self.daemon)
-        self.thread.start()
-        return self.thread
 
     def disconnect(self):
         """Disconnect the stream"""
-        self.running = False
+        pass
 
     def on_closed(self, response):
         """This is called when the stream has been closed by Twitter.
@@ -175,20 +63,20 @@ class BaseStream:
         response : requests.Response
             The Response from Twitter
         """
-        log.error("Stream connection closed by Twitter")
+        pass
 
     def on_connect(self):
         """This is called after successfully connecting to the streaming API.
         """
-        log.info("Stream connected")
+        pass
 
     def on_connection_error(self):
         """This is called when the stream connection errors or times out."""
-        log.error("Stream connection has errored or timed out")
+        pass
 
     def on_disconnect(self):
         """This is called when the stream has disconnected."""
-        log.info("Stream disconnected")
+        pass
 
     def on_exception(self, exception):
         """This is called when an unhandled exception occurs.
@@ -198,11 +86,11 @@ class BaseStream:
         exception : Exception
             The unhandled exception
         """
-        log.exception("Stream encountered an exception")
+        pass
 
     def on_keep_alive(self):
         """This is called when a keep-alive signal is received."""
-        log.debug("Received keep-alive signal")
+        pass
 
     def on_request_error(self, status_code):
         """This is called when a non-200 HTTP status code is encountered.
@@ -212,7 +100,7 @@ class BaseStream:
         status_code : int
             The HTTP status code encountered
         """
-        log.error("Stream encountered HTTP error: %d", status_code)
+        pass
 
 
 class StreamingClient(BaseClient, BaseStream):
@@ -272,10 +160,6 @@ class StreamingClient(BaseClient, BaseStream):
                             wait_on_rate_limit=wait_on_rate_limit)
         BaseStream.__init__(self, **kwargs)
 
-    def _connect(self, method, endpoint, **kwargs):
-        self.session.headers["Authorization"] = f"Bearer {self.bearer_token}"
-        url = f"https://api.twitter.com/2/tweets/{endpoint}/stream"
-        super()._connect(method, url, **kwargs)
 
     def _process_data(self, data, data_type=None):
         if data_type is StreamRule:
@@ -321,19 +205,7 @@ class StreamingClient(BaseClient, BaseStream):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/tweets/filtered-stream/api-reference/post-tweets-search-stream-rules
         """
-        json = {"add": []}
-        if isinstance(add, StreamRule):
-            add = (add,)
-        for rule in add:
-            if rule.tag is not None:
-                json["add"].append({"value": rule.value, "tag": rule.tag})
-            else:
-                json["add"].append({"value": rule.value})
-
-        return self._make_request(
-            "POST", f"/2/tweets/search/stream/rules", params=params,
-            endpoint_parameters=("dry_run",), json=json, data_type=StreamRule
-        )
+        pass
 
     def delete_rules(self, ids, **params):
         """delete_rules(ids, *, dry_run)
@@ -358,19 +230,7 @@ class StreamingClient(BaseClient, BaseStream):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/tweets/filtered-stream/api-reference/post-tweets-search-stream-rules
         """
-        json = {"delete": {"ids": []}}
-        if isinstance(ids, (int, str, StreamRule)):
-            ids = (ids,)
-        for id in ids:
-            if isinstance(id, StreamRule):
-                json["delete"]["ids"].append(str(id.id))
-            else:
-                json["delete"]["ids"].append(str(id))
-
-        return self._make_request(
-            "POST", f"/2/tweets/search/stream/rules", params=params,
-            endpoint_parameters=("dry_run",), json=json, data_type=StreamRule
-        )
+        pass
 
     def filter(self, *, threaded=False, **params):
         """filter( \
@@ -439,23 +299,7 @@ class StreamingClient(BaseClient, BaseStream):
         .. _filter redundant connections: https://developer.twitter.com/en/docs/twitter-api/tweets/filtered-stream/integrate/recovery-and-redundancy-features
         .. _Tweet cap: https://developer.twitter.com/en/docs/twitter-api/tweet-caps
         """
-        if self.running:
-            raise TweepyException("Stream is already connected")
-
-        method = "GET"
-        endpoint = "search"
-
-        params = self._process_params(
-            params, endpoint_parameters=(
-                "backfill_minutes", "expansions", "media.fields",
-                "place.fields", "poll.fields", "tweet.fields", "user.fields"
-            )
-        )
-
-        if threaded:
-            return self._threaded_connect(method, endpoint, params=params)
-        else:
-            self._connect(method, endpoint, params=params)
+        pass
 
     def get_rules(self, **params):
         """get_rules(*, ids)
@@ -477,10 +321,7 @@ class StreamingClient(BaseClient, BaseStream):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/tweets/filtered-stream/api-reference/get-tweets-search-stream-rules
         """
-        return self._make_request(
-            "GET", f"/2/tweets/search/stream/rules", params=params,
-            endpoint_parameters=("ids",), data_type=StreamRule
-        )
+        pass
 
     def sample(self, *, threaded=False, **params):
         """sample( \
@@ -545,23 +386,7 @@ class StreamingClient(BaseClient, BaseStream):
 
         .. _sample redundant connections: https://developer.twitter.com/en/docs/twitter-api/tweets/volume-streams/integrate/recovery-and-redundancy-features
         """
-        if self.running:
-            raise TweepyException("Stream is already connected")
-
-        method = "GET"
-        endpoint = "sample"
-
-        params = self._process_params(
-            params, endpoint_parameters=(
-                "backfill_minutes", "expansions", "media.fields",
-                "place.fields", "poll.fields", "tweet.fields", "user.fields"
-            )
-        )
-
-        if threaded:
-            return self._threaded_connect(method, endpoint, params=params)
-        else:
-            self._connect(method, endpoint, params=params)
+        pass
 
     def on_data(self, raw_data):
         """This is called when raw data is received from the stream.
@@ -576,32 +401,7 @@ class StreamingClient(BaseClient, BaseStream):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/tweets/filtered-stream/integrate/consuming-streaming-data
         """
-        data = json.loads(raw_data)
-
-        tweet = None
-        includes = {}
-        errors = []
-        matching_rules = []
-
-        if "data" in data:
-            tweet = Tweet(data["data"])
-            self.on_tweet(tweet)
-        if "includes" in data:
-            includes = self._process_includes(data["includes"])
-            self.on_includes(includes)
-        if "errors" in data:
-            errors = data["errors"]
-            self.on_errors(errors)
-        if "matching_rules" in data:
-            matching_rules = [
-                StreamRule(id=rule["id"], tag=rule["tag"])
-                for rule in data["matching_rules"]
-            ]
-            self.on_matching_rules(matching_rules)
-
-        self.on_response(
-            StreamResponse(tweet, includes, errors, matching_rules)
-        )
+        pass
 
     def on_tweet(self, tweet):
         """This is called when a Tweet is received.
@@ -631,7 +431,7 @@ class StreamingClient(BaseClient, BaseStream):
         errors : dict
             The errors received
         """
-        log.error("Received errors: %s", errors)
+        pass
 
     def on_matching_rules(self, matching_rules):
         """This is called when matching rules are received.
@@ -651,7 +451,7 @@ class StreamingClient(BaseClient, BaseStream):
         response : StreamResponse
             The response received
         """
-        log.debug("Received response: %s", response)
+        pass
 
 
 class StreamRule(NamedTuple):

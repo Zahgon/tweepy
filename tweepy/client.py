@@ -244,44 +244,8 @@ class Client(BaseClient):
         User agent used when making requests to the API
     """
 
-    def _get_authenticating_user_id(self, *, oauth_1=False):
-        if oauth_1:
-            if self.access_token is None:
-                raise TypeError(
-                    "Access Token must be provided for OAuth 1.0a User Context"
-                )
-            else:
-                return self._get_oauth_1_authenticating_user_id(
-                    self.access_token
-                )
-        else:
-            if self.bearer_token is None:
-                raise TypeError(
-                    "Access Token must be provided for "
-                    "OAuth 2.0 Authorization Code Flow with PKCE"
-                )
-            else:
-                return self._get_oauth_2_authenticating_user_id(
-                    self.bearer_token
-                )
 
-    @cache
-    def _get_oauth_1_authenticating_user_id(self, access_token):
-        return access_token.partition('-')[0]
 
-    @cache
-    def _get_oauth_2_authenticating_user_id(self, access_token):
-        original_access_token = self.bearer_token
-        original_return_type = self.return_type
-
-        self.bearer_token = access_token
-        self.return_type = dict
-        user_id = self.get_me(user_auth=False)["data"]["id"]
-
-        self.bearer_token = original_access_token
-        self.return_type = original_return_type
-
-        return user_id
 
     # Bookmarks
 
@@ -316,12 +280,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/tweets/bookmarks/api-reference/delete-users-id-bookmarks-tweet_id
         """
-        id = self._get_authenticating_user_id()
-        route = f"/2/users/{id}/bookmarks/{tweet_id}"
-
-        return self._make_request(
-            "DELETE", route
-        )
+        pass
 
     def get_bookmarks(self, **params):
         """get_bookmarks( \
@@ -379,17 +338,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/tweets/bookmarks/api-reference/get-users-id-bookmarks
         """
-        id = self._get_authenticating_user_id()
-        route = f"/2/users/{id}/bookmarks"
-
-        return self._make_request(
-            "GET", route, params=params,
-            endpoint_parameters=(
-                "expansions", "max_results", "media.fields",
-                "pagination_token", "place.fields", "poll.fields",
-                "tweet.fields", "user.fields"
-            ), data_type=Tweet
-        )
+        pass
 
     def bookmark(self, tweet_id):
         """Causes the authenticating user to Bookmark the target Tweet provided
@@ -422,12 +371,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/tweets/bookmarks/api-reference/post-users-id-bookmarks
         """
-        id = self._get_authenticating_user_id()
-        route = f"/2/users/{id}/bookmarks"
-
-        return self._make_request(
-            "POST", route, json={"tweet_id": str(tweet_id)}
-        )
+        pass
 
     # Hide replies
 
@@ -453,10 +397,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/tweets/hide-replies/api-reference/put-tweets-id-hidden
         """
-        return self._make_request(
-            "PUT", f"/2/tweets/{id}/hidden", json={"hidden": True},
-            user_auth=user_auth
-        )
+        pass
 
     def unhide_reply(self, id, *, user_auth=True):
         """Unhides a reply to a Tweet.
@@ -480,10 +421,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/tweets/hide-replies/api-reference/put-tweets-id-hidden
         """
-        return self._make_request(
-            "PUT", f"/2/tweets/{id}/hidden", json={"hidden": False},
-            user_auth=user_auth
-        )
+        pass
 
     # Likes
 
@@ -529,12 +467,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/tweets/likes/api-reference/delete-users-id-likes-tweet_id
         """
-        id = self._get_authenticating_user_id(oauth_1=user_auth)
-        route = f"/2/users/{id}/likes/{tweet_id}"
-
-        return self._make_request(
-            "DELETE", route, user_auth=user_auth
-        )
+        pass
 
     def get_liking_users(self, id, *, user_auth=False, **params):
         """get_liking_users( \
@@ -585,14 +518,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/tweets/likes/api-reference/get-tweets-id-liking_users
         """
-        return self._make_request(
-            "GET", f"/2/tweets/{id}/liking_users", params=params,
-            endpoint_parameters=(
-                "expansions", "max_results", "media.fields",
-                "pagination_token", "place.fields", "poll.fields",
-                "tweet.fields", "user.fields"
-            ), data_type=User, user_auth=user_auth
-        )
+        pass
 
     def get_liked_tweets(self, id, *, user_auth=False, **params):
         """get_liked_tweets( \
@@ -645,14 +571,7 @@ class Client(BaseClient):
 
         .. _Tweet cap: https://developer.twitter.com/en/docs/projects/overview#tweet-cap
         """
-        return self._make_request(
-            "GET", f"/2/users/{id}/liked_tweets", params=params,
-            endpoint_parameters=(
-                "expansions", "max_results", "media.fields",
-                "pagination_token", "place.fields", "poll.fields",
-                "tweet.fields", "user.fields"
-            ), data_type=Tweet, user_auth=user_auth
-        )
+        pass
 
     def like(self, tweet_id, *, user_auth=True):
         """Like a Tweet.
@@ -693,13 +612,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/tweets/likes/api-reference/post-users-id-likes
         """
-        id = self._get_authenticating_user_id(oauth_1=user_auth)
-        route = f"/2/users/{id}/likes"
-
-        return self._make_request(
-            "POST", route, json={"tweet_id": str(tweet_id)},
-            user_auth=user_auth
-        )
+        pass
 
     # Manage Tweets
 
@@ -726,9 +639,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/tweets/manage-tweets/api-reference/delete-tweets-id
         """
-        return self._make_request(
-            "DELETE", f"/2/tweets/{id}", user_auth=user_auth
-        )
+        pass
 
     def create_tweet(
         self, *, direct_message_deep_link=None, for_super_followers_only=None,
@@ -800,55 +711,7 @@ class Client(BaseClient):
         .. _Super Followers: https://help.twitter.com/en/using-twitter/super-follows
         .. _Settings: https://blog.twitter.com/en_us/topics/product/2020/new-conversation-settings-coming-to-a-tweet-near-you
         """
-        json = {}
-
-        if direct_message_deep_link is not None:
-            json["direct_message_deep_link"] = direct_message_deep_link
-
-        if community_id is not None:
-            json["community_id"] = community_id
-
-        if for_super_followers_only is not None:
-            json["for_super_followers_only"] = for_super_followers_only
-
-        if place_id is not None:
-            json["geo"] = {"place_id": place_id}
-
-        if media_ids is not None:
-            json["media"] = {
-                "media_ids": [str(media_id) for media_id in media_ids]
-            }
-            if media_tagged_user_ids is not None:
-                json["media"]["tagged_user_ids"] = [
-                    str(media_tagged_user_id)
-                    for media_tagged_user_id in media_tagged_user_ids
-                ]
-
-        if poll_options is not None:
-            json["poll"] = {"options": poll_options}
-            if poll_duration_minutes is not None:
-                json["poll"]["duration_minutes"] = poll_duration_minutes
-
-        if quote_tweet_id is not None:
-            json["quote_tweet_id"] = str(quote_tweet_id)
-
-        if in_reply_to_tweet_id is not None:
-            json["reply"] = {"in_reply_to_tweet_id": str(in_reply_to_tweet_id)}
-            if exclude_reply_user_ids is not None:
-                json["reply"]["exclude_reply_user_ids"] = [
-                    str(exclude_reply_user_id)
-                    for exclude_reply_user_id in exclude_reply_user_ids
-                ]
-
-        if reply_settings is not None:
-            json["reply_settings"] = reply_settings
-
-        if text is not None:
-            json["text"] = text
-
-        return self._make_request(
-            "POST", f"/2/tweets", json=json, user_auth=user_auth
-        )
+        pass
 
     # Quote Tweets
 
@@ -913,14 +776,7 @@ class Client(BaseClient):
 
         .. _Tweet cap: https://developer.twitter.com/en/docs/projects/overview#tweet-cap
         """
-        return self._make_request(
-            "GET", f"/2/tweets/{id}/quote_tweets", params=params,
-            endpoint_parameters=(
-                "exclude", "expansions", "max_results", "media.fields",
-                "pagination_token", "place.fields", "poll.fields",
-                "tweet.fields", "user.fields"
-            ), data_type=Tweet, user_auth=user_auth
-        )
+        pass
 
     # Retweets
 
@@ -967,12 +823,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/tweets/retweets/api-reference/delete-users-id-retweets-tweet_id
         """
-        id = self._get_authenticating_user_id(oauth_1=user_auth)
-        route = f"/2/users/{id}/retweets/{source_tweet_id}"
-
-        return self._make_request(
-            "DELETE", route, user_auth=user_auth
-        )
+        pass
 
     def get_retweeters(self, id, *, user_auth=False, **params):
         """get_retweeters( \
@@ -1023,14 +874,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/tweets/retweets/api-reference/get-tweets-id-retweeted_by
         """
-        return self._make_request(
-            "GET", f"/2/tweets/{id}/retweeted_by", params=params,
-            endpoint_parameters=(
-                "expansions", "max_results", "media.fields",
-                "pagination_token", "place.fields", "poll.fields",
-                "tweet.fields", "user.fields"
-            ), data_type=User, user_auth=user_auth
-        )
+        pass
 
     def retweet(self, tweet_id, *, user_auth=True):
         """Causes the user ID to Retweet the target Tweet.
@@ -1071,13 +915,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/tweets/retweets/api-reference/post-users-id-retweets
         """
-        id = self._get_authenticating_user_id(oauth_1=user_auth)
-        route = f"/2/users/{id}/retweets"
-
-        return self._make_request(
-            "POST", route, json={"tweet_id": str(tweet_id)},
-            user_auth=user_auth
-        )
+        pass
 
     # Search Tweets
 
@@ -1173,16 +1011,7 @@ class Client(BaseClient):
         .. _Tweet cap: https://developer.twitter.com/en/docs/projects/overview#tweet-cap
         .. _pagination: https://developer.twitter.com/en/docs/twitter-api/tweets/search/integrate/paginate
         """
-        params["query"] = query
-        return self._make_request(
-            "GET", "/2/tweets/search/all", params=params,
-            endpoint_parameters=(
-                "end_time", "expansions", "max_results", "media.fields",
-                "next_token", "place.fields", "poll.fields", "query",
-                "since_id", "sort_order", "start_time", "tweet.fields",
-                "until_id", "user.fields"
-            ), data_type=Tweet
-        )
+        pass
 
     def search_recent_tweets(self, query, *, user_auth=False, **params):
         """search_recent_tweets( \
@@ -1276,16 +1105,7 @@ class Client(BaseClient):
         .. _operators: https://developer.twitter.com/en/docs/twitter-api/tweets/search/integrate/build-a-query
         .. _Academic Research Project: https://developer.twitter.com/en/docs/projects
         """
-        params["query"] = query
-        return self._make_request(
-            "GET", "/2/tweets/search/recent", params=params,
-            endpoint_parameters=(
-                "end_time", "expansions", "max_results", "media.fields",
-                "next_token", "place.fields", "poll.fields", "query",
-                "since_id", "sort_order", "start_time", "tweet.fields",
-                "until_id", "user.fields"
-            ), data_type=Tweet, user_auth=user_auth
-        )
+        pass
 
     # Timelines
 
@@ -1380,14 +1200,7 @@ class Client(BaseClient):
         .. _user/lookup: https://developer.twitter.com/en/docs/twitter-api/users/lookup/introduction
         .. _here: https://developer.twitter.com/en/docs/twitter-ids
         """
-        return self._make_request(
-            "GET", f"/2/users/{id}/mentions", params=params,
-            endpoint_parameters=(
-                "end_time", "expansions", "max_results", "media.fields",
-                "pagination_token", "place.fields", "poll.fields", "since_id",
-                "start_time", "tweet.fields", "until_id", "user.fields"
-            ), data_type=Tweet, user_auth=user_auth
-        )
+        pass
 
     def get_home_timeline(self, *, user_auth=True, **params):
         """get_home_timeline( \
@@ -1481,18 +1294,7 @@ class Client(BaseClient):
 
         .. _here: https://developer.twitter.com/en/docs/twitter-ids
         """
-        id = self._get_authenticating_user_id(oauth_1=user_auth)
-        route = f"/2/users/{id}/timelines/reverse_chronological"
-
-        return self._make_request(
-            "GET", route, params=params,
-            endpoint_parameters=(
-                "end_time", "exclude", "expansions", "max_results",
-                "media.fields", "pagination_token", "place.fields",
-                "poll.fields", "since_id", "start_time", "tweet.fields",
-                "until_id", "user.fields"
-            ), data_type=Tweet, user_auth=user_auth
-        )
+        pass
 
     def get_users_tweets(self, id, *, user_auth=False, **params):
         """get_users_tweets( \
@@ -1594,15 +1396,7 @@ class Client(BaseClient):
         .. _user/lookup: https://developer.twitter.com/en/docs/twitter-api/users/lookup/introduction
         .. _here: https://developer.twitter.com/en/docs/twitter-ids
         """
-        return self._make_request(
-            "GET", f"/2/users/{id}/tweets", params=params,
-            endpoint_parameters=(
-                "end_time", "exclude", "expansions", "max_results",
-                "media.fields", "pagination_token", "place.fields",
-                "poll.fields", "since_id", "start_time", "tweet.fields",
-                "until_id", "user.fields"
-            ), data_type=Tweet, user_auth=user_auth
-        )
+        pass
 
     # Tweet counts
 
@@ -1667,14 +1461,7 @@ class Client(BaseClient):
         .. _Academic Research product track: https://developer.twitter.com/en/docs/projects/overview#product-track
         .. _pagination: https://developer.twitter.com/en/docs/twitter-api/tweets/search/integrate/paginate
         """
-        params["query"] = query
-        return self._make_request(
-            "GET", "/2/tweets/counts/all", params=params,
-            endpoint_parameters=(
-                "end_time", "granularity", "next_token", "query", "since_id",
-                "start_time", "until_id"
-            )
-        )
+        pass
 
     def get_recent_tweets_count(self, query, **params):
         """get_recent_tweets_count( \
@@ -1736,14 +1523,7 @@ class Client(BaseClient):
         .. _operators: https://developer.twitter.com/en/docs/twitter-api/tweets/search/integrate/build-a-query
         .. _Academic Research Project: https://developer.twitter.com/en/docs/projects
         """
-        params["query"] = query
-        return self._make_request(
-            "GET", "/2/tweets/counts/recent", params=params,
-            endpoint_parameters=(
-                "end_time", "granularity", "query", "since_id", "start_time",
-                "until_id"
-            )
-        )
+        pass
 
     # Tweet lookup
 
@@ -1784,13 +1564,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/tweets/lookup/api-reference/get-tweets-id
         """
-        return self._make_request(
-            "GET", f"/2/tweets/{id}", params=params,
-            endpoint_parameters=(
-                "expansions", "media.fields", "place.fields", "poll.fields",
-                "tweet.fields", "user.fields"
-            ), data_type=Tweet, user_auth=user_auth
-        )
+        pass
 
     def get_tweets(self, ids, *, user_auth=False, **params):
         """get_tweets( \
@@ -1831,14 +1605,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/tweets/lookup/api-reference/get-tweets
         """
-        params["ids"] = ids
-        return self._make_request(
-            "GET", "/2/tweets", params=params,
-            endpoint_parameters=(
-                "ids", "expansions", "media.fields", "place.fields",
-                "poll.fields", "tweet.fields", "user.fields"
-            ), data_type=Tweet, user_auth=user_auth
-        )
+        pass
 
     # Blocks
 
@@ -1898,16 +1665,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/users/blocks/api-reference/get-users-blocking
         """
-        id = self._get_authenticating_user_id(oauth_1=user_auth)
-        route = f"/2/users/{id}/blocking"
-
-        return self._make_request(
-            "GET", route, params=params,
-            endpoint_parameters=(
-                "expansions", "max_results", "pagination_token",
-                "tweet.fields", "user.fields"
-            ), data_type=User, user_auth=user_auth
-        )
+        pass
 
     # Follows
 
@@ -1956,12 +1714,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/users/follows/api-reference/delete-users-source_id-following
         """
-        source_user_id = self._get_authenticating_user_id(oauth_1=user_auth)
-        route = f"/2/users/{source_user_id}/following/{target_user_id}"
-
-        return self._make_request(
-            "DELETE", route, user_auth=user_auth
-        )
+        pass
 
     def unfollow(self, target_user_id, *, user_auth=True):
         """Alias for :meth:`Client.unfollow_user`
@@ -1969,11 +1722,7 @@ class Client(BaseClient):
         .. deprecated:: 4.2
             Use :meth:`Client.unfollow_user` instead.
         """
-        warnings.warn(
-            "Client.unfollow is deprecated; use Client.unfollow_user instead.",
-            DeprecationWarning
-        )
-        return self.unfollow_user(target_user_id, user_auth=user_auth)
+        pass
 
     def get_users_followers(self, id, *, user_auth=False, **params):
         """get_users_followers( \
@@ -2019,14 +1768,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/users/follows/api-reference/get-users-id-followers
         """
-        return self._make_request(
-            "GET", f"/2/users/{id}/followers", params=params,
-            endpoint_parameters=(
-                "expansions", "max_results", "pagination_token",
-                "tweet.fields", "user.fields"
-            ),
-            data_type=User, user_auth=user_auth
-        )
+        pass
 
     def get_users_following(self, id, *, user_auth=False, **params):
         """get_users_following( \
@@ -2072,13 +1814,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/users/follows/api-reference/get-users-id-following
         """
-        return self._make_request(
-            "GET", f"/2/users/{id}/following", params=params,
-            endpoint_parameters=(
-                "expansions", "max_results", "pagination_token",
-                "tweet.fields", "user.fields"
-            ), data_type=User, user_auth=user_auth
-        )
+        pass
 
     def follow_user(self, target_user_id, *, user_auth=True):
         """Allows a user ID to follow another user.
@@ -2129,13 +1865,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/users/follows/api-reference/post-users-source_user_id-following
         """
-        source_user_id = self._get_authenticating_user_id(oauth_1=user_auth)
-        route = f"/2/users/{source_user_id}/following"
-
-        return self._make_request(
-            "POST", route, json={"target_user_id": str(target_user_id)},
-            user_auth=user_auth
-        )
+        pass
 
     def follow(self, target_user_id, *, user_auth=True):
         """Alias for :meth:`Client.follow_user`
@@ -2143,11 +1873,7 @@ class Client(BaseClient):
         .. deprecated:: 4.2
             Use :meth:`Client.follow_user` instead.
         """
-        warnings.warn(
-            "Client.follow is deprecated; use Client.follow_user instead.",
-            DeprecationWarning
-        )
-        return self.follow_user(target_user_id, user_auth=user_auth)
+        pass
 
     # Mutes
 
@@ -2193,12 +1919,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/users/mutes/api-reference/delete-users-user_id-muting
         """
-        source_user_id = self._get_authenticating_user_id(oauth_1=user_auth)
-        route = f"/2/users/{source_user_id}/muting/{target_user_id}"
-
-        return self._make_request(
-            "DELETE", route, user_auth=user_auth
-        )
+        pass
 
     def get_muted(self, *, user_auth=True, **params):
         """get_muted( \
@@ -2258,16 +1979,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/users/mutes/api-reference/get-users-muting
         """
-        id = self._get_authenticating_user_id(oauth_1=user_auth)
-        route = f"/2/users/{id}/muting"
-
-        return self._make_request(
-            "GET", route, params=params,
-            endpoint_parameters=(
-                "expansions", "max_results", "pagination_token",
-                "tweet.fields", "user.fields"
-            ), data_type=User, user_auth=user_auth
-        )
+        pass
 
     def mute(self, target_user_id, *, user_auth=True):
         """Allows an authenticated user ID to mute the target user.
@@ -2308,13 +2020,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/users/mutes/api-reference/post-users-user_id-muting
         """
-        id = self._get_authenticating_user_id(oauth_1=user_auth)
-        route = f"/2/users/{id}/muting"
-
-        return self._make_request(
-            "POST", route, json={"target_user_id": str(target_user_id)},
-            user_auth=user_auth
-        )
+        pass
 
     # User lookup
 
@@ -2354,23 +2060,7 @@ class Client(BaseClient):
         https://developer.twitter.com/en/docs/twitter-api/users/lookup/api-reference/get-users-id
         https://developer.twitter.com/en/docs/twitter-api/users/lookup/api-reference/get-users-by-username-username
         """
-        if id is not None and username is not None:
-            raise TypeError("Expected ID or username, not both")
-
-        route = "/2/users"
-
-        if id is not None:
-            route += f"/{id}"
-        elif username is not None:
-            route += f"/by/username/{username}"
-        else:
-            raise TypeError("ID or username is required")
-
-        return self._make_request(
-            "GET", route, params=params,
-            endpoint_parameters=("expansions", "tweet.fields", "user.fields"),
-            data_type=User, user_auth=user_auth
-        )
+        pass
 
     def get_users(self, *, ids=None, usernames=None, user_auth=False,
                   **params):
@@ -2413,25 +2103,7 @@ class Client(BaseClient):
         https://developer.twitter.com/en/docs/twitter-api/users/lookup/api-reference/get-users
         https://developer.twitter.com/en/docs/twitter-api/users/lookup/api-reference/get-users-by
         """
-        if ids is not None and usernames is not None:
-            raise TypeError("Expected IDs or usernames, not both")
-
-        route = "/2/users"
-
-        if ids is not None:
-            params["ids"] = ids
-        elif usernames is not None:
-            route += "/by"
-            params["usernames"] = usernames
-        else:
-            raise TypeError("IDs or usernames are required")
-
-        return self._make_request(
-            "GET", route, params=params,
-            endpoint_parameters=(
-                "ids", "usernames", "expansions", "tweet.fields", "user.fields"
-            ), data_type=User, user_auth=user_auth
-        )
+        pass
 
     def get_me(self, *, user_auth=True, **params):
         """get_me(*, expansions=None, tweet_fields=None, user_fields=None, \
@@ -2460,11 +2132,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/users/lookup/api-reference/get-users-me
         """
-        return self._make_request(
-            "GET", f"/2/users/me", params=params,
-            endpoint_parameters=("expansions", "tweet.fields", "user.fields"),
-            data_type=User, user_auth=user_auth
-        )
+        pass
 
     # Search Spaces
 
@@ -2506,14 +2174,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/spaces/search/api-reference/get-spaces-search
         """
-        params["query"] = query
-        return self._make_request(
-            "GET", "/2/spaces/search", params=params,
-            endpoint_parameters=(
-                "query", "expansions", "max_results", "space.fields", "state",
-                "user.fields"
-            ), data_type=Space
-        )
+        pass
 
     # Spaces lookup
 
@@ -2554,25 +2215,7 @@ class Client(BaseClient):
         https://developer.twitter.com/en/docs/twitter-api/spaces/lookup/api-reference/get-spaces
         https://developer.twitter.com/en/docs/twitter-api/spaces/lookup/api-reference/get-spaces-by-creator-ids
         """
-        if ids is not None and user_ids is not None:
-            raise TypeError("Expected IDs or user IDs, not both")
-
-        route = "/2/spaces"
-
-        if ids is not None:
-            params["ids"] = ids
-        elif user_ids is not None:
-            route += "/by/creator_ids"
-            params["user_ids"] = user_ids
-        else:
-            raise TypeError("IDs or user IDs are required")
-
-        return self._make_request(
-            "GET", route, params=params,
-            endpoint_parameters=(
-                "ids", "user_ids", "expansions", "space.fields", "user.fields"
-            ), data_type=Space
-        )
+        pass
 
     def get_space(self, id, **params):
         """get_space(id, *, expansions=None, space_fields=None, \
@@ -2602,12 +2245,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/spaces/lookup/api-reference/get-spaces-id
         """
-        return self._make_request(
-            "GET", f"/2/spaces/{id}", params=params,
-            endpoint_parameters=(
-                "expansions", "space.fields", "user.fields"
-            ), data_type=Space
-        )
+        pass
 
     def get_space_buyers(self, id, **params):
         """get_space_buyers( \
@@ -2647,13 +2285,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/spaces/lookup/api-reference/get-spaces-id-buyers
         """
-        return self._make_request(
-            "GET", f"/2/spaces/{id}/buyers", params=params,
-            endpoint_parameters=(
-                "expansions", "media.fields", "place.fields", "poll.fields",
-                "tweet.fields", "user.fields"
-            ), data_type=User
-        )
+        pass
 
     def get_space_tweets(self, id, **params):
         """get_space_tweets( \
@@ -2691,13 +2323,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/spaces/lookup/api-reference/get-spaces-id-tweets
         """
-        return self._make_request(
-            "GET", f"/2/spaces/{id}/tweets", params=params,
-            endpoint_parameters=(
-                "expansions", "media.fields", "place.fields", "poll.fields",
-                "tweet.fields", "user.fields"
-            ), data_type=Tweet
-        )
+        pass
 
     # Direct Messages lookup
 
@@ -2777,25 +2403,7 @@ class Client(BaseClient):
         https://developer.twitter.com/en/docs/twitter-api/direct-messages/lookup/api-reference/get-dm_conversations-with-participant_id-dm_events
         https://developer.twitter.com/en/docs/twitter-api/direct-messages/lookup/api-reference/get-dm_conversations-dm_conversation_id-dm_events
         """
-        if dm_conversation_id is not None and participant_id is not None:
-            raise TypeError(
-                "Expected DM conversation ID or participant ID, not both"
-            )
-        elif dm_conversation_id is not None:
-            path = f"/2/dm_conversations/{dm_conversation_id}/dm_events"
-        elif participant_id is not None:
-            path = f"/2/dm_conversations/with/{participant_id}/dm_events"
-        else:
-            path = "/2/dm_events"
-
-        return self._make_request(
-            "GET", path, params=params,
-            endpoint_parameters=(
-                "dm_event.fields", "event_types", "expansions", "max_results",
-                "media.fields", "pagination_token", "tweet.fields",
-                "user.fields"
-            ), data_type=DirectMessageEvent, user_auth=user_auth
-        )
+        pass
 
     get_dm_events = get_direct_message_events
 
@@ -2854,24 +2462,7 @@ class Client(BaseClient):
         https://developer.twitter.com/en/docs/twitter-api/direct-messages/manage/api-reference/post-dm_conversations-dm_conversation_id-messages
         https://developer.twitter.com/en/docs/twitter-api/direct-messages/manage/api-reference/post-dm_conversations-with-participant_id-messages
         """
-        if dm_conversation_id is not None and participant_id is not None:
-            raise TypeError(
-                "Expected DM conversation ID or participant ID, not both"
-            )
-        elif dm_conversation_id is not None:
-            path = f"/2/dm_conversations/{dm_conversation_id}/messages"
-        elif participant_id is not None:
-            path = f"/2/dm_conversations/with/{participant_id}/messages"
-        else:
-            raise TypeError("DM conversation ID or participant ID is required")
-
-        json = {}
-        if media_id is not None:
-            json["attachments"] = [{"media_id": str(media_id)}]
-        if text is not None:
-            json["text"] = text
-
-        return self._make_request("POST", path, json=json, user_auth=user_auth)
+        pass
 
     create_dm = create_direct_message
 
@@ -2911,19 +2502,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/direct-messages/manage/api-reference/post-dm_conversations
         """
-        json = {
-            "conversation_type": "Group",
-            "message": {},
-            "participant_ids": list(map(str, participant_ids))
-        }
-        if media_id is not None:
-            json["message"]["attachments"] = [{"media_id": str(media_id)}]
-        if text is not None:
-            json["message"]["text"] = text
-
-        return self._make_request(
-            "POST", "/2/dm_conversations", json=json, user_auth=user_auth
-        )
+        pass
 
     create_dm_conversation = create_direct_message_conversation
 
@@ -2981,14 +2560,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/lists/list-tweets/api-reference/get-lists-id-tweets
         """
-        return self._make_request(
-            "GET", f"/2/lists/{id}/tweets", params=params,
-            endpoint_parameters=(
-                "expansions", "max_results", "media.fields",
-                "pagination_token", "place.fields", "poll.fields",
-                "tweet.fields", "user.fields"
-            ), data_type=Tweet, user_auth=user_auth
-        )
+        pass
 
     # List follows
 
@@ -3033,12 +2605,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/lists/list-follows/api-reference/delete-users-id-followed-lists-list_id
         """
-        id = self._get_authenticating_user_id(oauth_1=user_auth)
-        route = f"/2/users/{id}/followed_lists/{list_id}"
-
-        return self._make_request(
-            "DELETE", route, user_auth=user_auth
-        )
+        pass
 
     def get_list_followers(self, id, *, user_auth=False, **params):
         """get_list_followers( \
@@ -3086,13 +2653,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/lists/list-follows/api-reference/get-lists-id-followers
         """
-        return self._make_request(
-            "GET", f"/2/lists/{id}/followers", params=params,
-            endpoint_parameters=(
-                "expansions", "max_results", "pagination_token",
-                "tweet.fields", "user.fields"
-            ), data_type=User, user_auth=user_auth
-        )
+        pass
 
     def get_followed_lists(self, id, *, user_auth=False, **params):
         """get_followed_lists( \
@@ -3140,13 +2701,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/lists/list-follows/api-reference/get-users-id-followed_lists
         """
-        return self._make_request(
-            "GET", f"/2/users/{id}/followed_lists", params=params,
-            endpoint_parameters=(
-                "expansions", "list.fields", "max_results", "pagination_token",
-                "user.fields"
-            ), data_type=List, user_auth=user_auth
-        )
+        pass
 
     def follow_list(self, list_id, *, user_auth=True):
         """Enables the authenticated user to follow a List.
@@ -3189,12 +2744,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/lists/list-follows/api-reference/post-users-id-followed-lists
         """
-        id = self._get_authenticating_user_id(oauth_1=user_auth)
-        route = f"/2/users/{id}/followed_lists"
-
-        return self._make_request(
-            "POST", route, json={"list_id": str(list_id)}, user_auth=user_auth
-        )
+        pass
 
     # List lookup
 
@@ -3227,12 +2777,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/lists/list-lookup/api-reference/get-lists-id
         """
-        return self._make_request(
-            "GET", f"/2/lists/{id}", params=params,
-            endpoint_parameters=(
-                "expansions", "list.fields", "user.fields"
-            ), data_type=List, user_auth=user_auth
-        )
+        pass
 
     def get_owned_lists(self, id, *, user_auth=False, **params):
         """get_owned_lists( \
@@ -3275,13 +2820,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/lists/list-lookup/api-reference/get-users-id-owned_lists
         """
-        return self._make_request(
-            "GET", f"/2/users/{id}/owned_lists", params=params,
-            endpoint_parameters=(
-                "expansions", "list.fields", "max_results", "pagination_token",
-                "user.fields"
-            ), data_type=List, user_auth=user_auth
-        )
+        pass
 
     # List members
 
@@ -3311,10 +2850,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/lists/list-members/api-reference/delete-lists-id-members-user_id
         """
-
-        return self._make_request(
-            "DELETE", f"/2/lists/{id}/members/{user_id}", user_auth=user_auth
-        )
+        pass
 
     def get_list_members(self, id, *, user_auth=False, **params):
         """get_list_members( \
@@ -3357,13 +2893,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/lists/list-members/api-reference/get-lists-id-members
         """
-        return self._make_request(
-            "GET", f"/2/lists/{id}/members", params=params,
-            endpoint_parameters=(
-                "expansions", "max_results", "pagination_token",
-                "tweet.fields", "user.fields"
-            ), data_type=User, user_auth=user_auth
-        )
+        pass
 
     def get_list_memberships(self, id, *, user_auth=False, **params):
         """get_list_memberships( \
@@ -3406,13 +2936,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/lists/list-members/api-reference/get-users-id-list_memberships
         """
-        return self._make_request(
-            "GET", f"/2/users/{id}/list_memberships", params=params,
-            endpoint_parameters=(
-                "expansions", "list.fields", "max_results", "pagination_token",
-                "user.fields"
-            ), data_type=List, user_auth=user_auth
-        )
+        pass
 
     def add_list_member(self, id, user_id, *, user_auth=True):
         """Enables the authenticated user to add a member to a List they own.
@@ -3439,10 +2963,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/lists/list-members/api-reference/post-lists-id-members
         """
-        return self._make_request(
-            "POST", f"/2/lists/{id}/members", json={"user_id": str(user_id)},
-            user_auth=user_auth
-        )
+        pass
 
     # Manage Lists
 
@@ -3469,10 +2990,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/lists/manage-lists/api-reference/delete-lists-id
         """
-
-        return self._make_request(
-            "DELETE", f"/2/lists/{id}", user_auth=user_auth
-        )
+        pass
 
     def update_list(self, id, *, description=None, name=None, private=None,
                     user_auth=True):
@@ -3548,17 +3066,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/lists/manage-lists/api-reference/post-lists
         """
-        json = {"name": name}
-
-        if description is not None:
-            json["description"] = description
-
-        if private is not None:
-            json["private"] = private
-
-        return self._make_request(
-            "POST", f"/2/lists", json=json, user_auth=user_auth
-        )
+        pass
 
     # Pinned Lists
 
@@ -3603,12 +3111,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/lists/pinned-lists/api-reference/delete-users-id-pinned-lists-list_id
         """
-        id = self._get_authenticating_user_id(oauth_1=user_auth)
-        route = f"/2/users/{id}/pinned_lists/{list_id}"
-
-        return self._make_request(
-            "DELETE", route, user_auth=user_auth
-        )
+        pass
 
     def get_pinned_lists(self, *, user_auth=True, **params):
         """get_pinned_lists(*, expansions=None, list_fields=None, \
@@ -3658,15 +3161,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/lists/pinned-lists/api-reference/get-users-id-pinned_lists
         """
-        id = self._get_authenticating_user_id(oauth_1=user_auth)
-        route = f"/2/users/{id}/pinned_lists"
-
-        return self._make_request(
-            "GET", route, params=params,
-            endpoint_parameters=(
-                "expansions", "list.fields", "user.fields"
-            ), data_type=List, user_auth=user_auth
-        )
+        pass
 
     def pin_list(self, list_id, *, user_auth=True):
         """Enables the authenticated user to pin a List.
@@ -3709,12 +3204,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/lists/pinned-lists/api-reference/post-users-id-pinned-lists
         """
-        id = self._get_authenticating_user_id(oauth_1=user_auth)
-        route = f"/2/users/{id}/pinned_lists"
-
-        return self._make_request(
-            "POST", route, json={"list_id": str(list_id)}, user_auth=user_auth
-        )
+        pass
 
     # Batch Compliance
 
@@ -3743,11 +3233,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/compliance/batch-compliance/api-reference/get-compliance-jobs
         """
-        params["type"] = type
-        return self._make_request(
-            "GET", "/2/compliance/jobs", params=params,
-            endpoint_parameters=("type", "status")
-        )
+        pass
 
     def get_compliance_job(self, id):
         """Get a single compliance job with the specified ID.
@@ -3767,9 +3253,7 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/compliance/batch-compliance/api-reference/get-compliance-jobs-id
         """
-        return self._make_request(
-            "GET", f"/2/compliance/jobs/{id}"
-        )
+        pass
 
     def create_compliance_job(self, type, *, name=None, resumable=None):
         """Creates a new compliance job for Tweet IDs or user IDs.
@@ -3803,14 +3287,4 @@ class Client(BaseClient):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/compliance/batch-compliance/api-reference/post-compliance-jobs
         """
-        json = {"type": type}
-
-        if name is not None:
-            json["name"] = name
-
-        if resumable is not None:
-            json["resumable"] = resumable
-
-        return self._make_request(
-            "POST", "/2/compliance/jobs", json=json
-        )
+        pass

@@ -35,109 +35,10 @@ class AsyncBaseStream:
             f"Tweepy/{tweepy.__version__}"
         )
 
-    async def _connect(
-        self, method, url, params=None, headers=None, body=None,
-        oauth_client=None, timeout=21
-    ):
-        error_count = 0
-        # https://developer.twitter.com/en/docs/twitter-api/v1/tweets/filter-realtime/guides/connecting
-        # https://developer.twitter.com/en/docs/twitter-api/tweets/filtered-stream/integrate/handling-disconnections
-        # https://developer.twitter.com/en/docs/twitter-api/tweets/volume-streams/integrate/handling-disconnections
-        network_error_wait = 0
-        network_error_wait_step = 0.25
-        network_error_wait_max = 16
-        http_error_wait = http_error_wait_start = 5
-        http_error_wait_max = 320
-        http_429_error_wait_start = 60
-
-        if self.session is None or self.session.closed:
-            self.session = aiohttp.ClientSession(
-                connector=aiohttp.TCPConnector(enable_cleanup_closed=True),
-                timeout=aiohttp.ClientTimeout(sock_read=timeout)
-            )
-        self.session.headers["User-Agent"] = self.user_agent
-
-        try:
-            while error_count <= self.max_retries:
-                try:
-                    if oauth_client is not None:
-                        url, headers, body = oauth_client.sign(
-                            url, http_method=method, headers=headers, body=body
-                        )
-                    async with self.session.request(
-                        method, url, params=params, headers=headers, data=body,
-                        proxy=self.proxy
-                    ) as resp:
-                        if resp.status == 200:
-                            error_count = 0
-                            http_error_wait = http_error_wait_start
-                            network_error_wait = 0
-
-                            await self.on_connect()
-
-                            async for line in resp.content:
-                                line = line.strip()
-                                if line:
-                                    await self.on_data(line)
-                                else:
-                                    await self.on_keep_alive()
-
-                            await self.on_closed(resp)
-                        else:
-                            await self.on_request_error(resp.status)
-                            # The error text is logged here instead of in
-                            # on_request_error to keep on_request_error
-                            # backwards-compatible. In a future version, the
-                            # ClientResponse should be passed to
-                            # on_request_error.
-                            response_text = await resp.text()
-                            log.error(
-                                "HTTP error response text: %s", response_text
-                            )
-
-                            error_count += 1
-
-                            if resp.status in (420, 429):
-                                if http_error_wait < http_429_error_wait_start:
-                                    http_error_wait = http_429_error_wait_start
-
-                            await asyncio.sleep(http_error_wait)
-
-                            http_error_wait *= 2
-                            if resp.status != 420:
-                                if http_error_wait > http_error_wait_max:
-                                    http_error_wait = http_error_wait_max
-                except (aiohttp.ClientConnectionError,
-                        aiohttp.ClientPayloadError) as e:
-                    await self.on_connection_error()
-                    # The error text is logged here instead of in
-                    # on_connection_error to keep on_connection_error
-                    # backwards-compatible. In a future version, the error
-                    # should be passed to on_connection_error.
-                    log.error(
-                        "Connection error: %s",
-                        "".join(
-                            traceback.format_exception_only(type(e), e)
-                        ).rstrip()
-                    )
-
-                    await asyncio.sleep(network_error_wait)
-
-                    network_error_wait += network_error_wait_step
-                    if network_error_wait > network_error_wait_max:
-                        network_error_wait = network_error_wait_max
-        except asyncio.CancelledError:
-            return
-        except Exception as e:
-            await self.on_exception(e)
-        finally:
-            await self.session.close()
-            await self.on_disconnect()
 
     def disconnect(self):
         """Disconnect the stream"""
-        if self.task is not None:
-            self.task.cancel()
+        pass
 
     async def on_closed(self, resp):
         """|coroutine|
@@ -149,28 +50,28 @@ class AsyncBaseStream:
         response : aiohttp.ClientResponse
             The response from Twitter
         """
-        log.error("Stream connection closed by Twitter")
+        pass
 
     async def on_connect(self):
         """|coroutine|
 
         This is called after successfully connecting to the streaming API.
         """
-        log.info("Stream connected")
+        pass
 
     async def on_connection_error(self):
         """|coroutine|
 
         This is called when the stream connection errors or times out.
         """
-        log.error("Stream connection has errored or timed out")
+        pass
 
     async def on_disconnect(self):
         """|coroutine|
 
         This is called when the stream has disconnected.
         """
-        log.info("Stream disconnected")
+        pass
 
     async def on_exception(self, exception):
         """|coroutine|
@@ -182,14 +83,14 @@ class AsyncBaseStream:
         exception : Exception
             The unhandled exception
         """
-        log.exception("Stream encountered an exception")
+        pass
 
     async def on_keep_alive(self):
         """|coroutine|
 
         This is called when a keep-alive signal is received.
         """
-        log.debug("Received keep-alive signal")
+        pass
 
     async def on_request_error(self, status_code):
         """|coroutine|
@@ -201,7 +102,7 @@ class AsyncBaseStream:
         status_code : int
             The HTTP status code encountered
         """
-        log.error("Stream encountered HTTP Error: %d", status_code)
+        pass
 
 
 class AsyncStreamingClient(AsyncBaseClient, AsyncBaseStream):
@@ -245,10 +146,6 @@ class AsyncStreamingClient(AsyncBaseClient, AsyncBaseStream):
                                  wait_on_rate_limit=wait_on_rate_limit)
         AsyncBaseStream.__init__(self, **kwargs)
 
-    async def _connect(self, method, endpoint, **kwargs):
-        url = f"https://api.twitter.com/2/tweets/{endpoint}/stream"
-        headers = {"Authorization": f"Bearer {self.bearer_token}"}
-        await super()._connect(method, url, headers=headers, **kwargs)
 
     def _process_data(self, data, data_type=None):
         if data_type is StreamRule:
@@ -296,19 +193,7 @@ class AsyncStreamingClient(AsyncBaseClient, AsyncBaseStream):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/tweets/filtered-stream/api-reference/post-tweets-search-stream-rules
         """
-        json = {"add": []}
-        if isinstance(add, StreamRule):
-            add = (add,)
-        for rule in add:
-            if rule.tag is not None:
-                json["add"].append({"value": rule.value, "tag": rule.tag})
-            else:
-                json["add"].append({"value": rule.value})
-
-        return await self._make_request(
-            "POST", f"/2/tweets/search/stream/rules", params=params,
-            endpoint_parameters=("dry_run",), json=json, data_type=StreamRule
-        )
+        pass
 
     async def delete_rules(self, ids, **params):
         """delete_rules(ids, *, dry_run)
@@ -335,19 +220,7 @@ class AsyncStreamingClient(AsyncBaseClient, AsyncBaseStream):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/tweets/filtered-stream/api-reference/post-tweets-search-stream-rules
         """
-        json = {"delete": {"ids": []}}
-        if isinstance(ids, (int, str, StreamRule)):
-            ids = (ids,)
-        for id in ids:
-            if isinstance(id, StreamRule):
-                json["delete"]["ids"].append(str(id.id))
-            else:
-                json["delete"]["ids"].append(str(id))
-
-        return await self._make_request(
-            "POST", f"/2/tweets/search/stream/rules", params=params,
-            endpoint_parameters=("dry_run",), json=json, data_type=StreamRule
-        )
+        pass
 
     def filter(self, **params):
         """filter( \
@@ -414,23 +287,7 @@ class AsyncStreamingClient(AsyncBaseClient, AsyncBaseStream):
         .. _filter redundant connections: https://developer.twitter.com/en/docs/twitter-api/tweets/filtered-stream/integrate/recovery-and-redundancy-features
         .. _Tweet cap: https://developer.twitter.com/en/docs/twitter-api/tweet-caps
         """
-        if self.task is not None and not self.task.done():
-            raise TweepyException("Stream is already connected")
-
-        endpoint = "search"
-
-        params = self._process_params(
-            params, endpoint_parameters=(
-                "backfill_minutes", "expansions", "media.fields",
-                "place.fields", "poll.fields", "tweet.fields", "user.fields"
-            )
-        )
-
-        self.task = asyncio.create_task(
-            self._connect("GET", endpoint, params=params)
-        )
-        # Use name parameter when support for Python 3.7 is dropped
-        return self.task
+        pass
 
     async def get_rules(self, **params):
         """get_rules(*, ids)
@@ -454,10 +311,7 @@ class AsyncStreamingClient(AsyncBaseClient, AsyncBaseStream):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/tweets/filtered-stream/api-reference/get-tweets-search-stream-rules
         """
-        return await self._make_request(
-            "GET", f"/2/tweets/search/stream/rules", params=params,
-            endpoint_parameters=("ids",), data_type=StreamRule
-        )
+        pass
 
     def sample(self, **params):
         """sample( \
@@ -520,23 +374,7 @@ class AsyncStreamingClient(AsyncBaseClient, AsyncBaseStream):
 
         .. _sample redundant connections: https://developer.twitter.com/en/docs/twitter-api/tweets/volume-streams/integrate/recovery-and-redundancy-features
         """
-        if self.task is not None and not self.task.done():
-            raise TweepyException("Stream is already connected")
-
-        endpoint = "sample"
-
-        params = self._process_params(
-            params, endpoint_parameters=(
-                "backfill_minutes", "expansions", "media.fields",
-                "place.fields", "poll.fields", "tweet.fields", "user.fields"
-            )
-        )
-
-        self.task = asyncio.create_task(
-            self._connect("GET", endpoint, params=params)
-        )
-        # Use name parameter when support for Python 3.7 is dropped
-        return self.task
+        pass
 
     async def on_data(self, raw_data):
         """|coroutine|
@@ -553,32 +391,7 @@ class AsyncStreamingClient(AsyncBaseClient, AsyncBaseStream):
         ----------
         https://developer.twitter.com/en/docs/twitter-api/tweets/filtered-stream/integrate/consuming-streaming-data
         """
-        data = json.loads(raw_data)
-
-        tweet = None
-        includes = {}
-        errors = []
-        matching_rules = []
-
-        if "data" in data:
-            tweet = Tweet(data["data"])
-            await self.on_tweet(tweet)
-        if "includes" in data:
-            includes = self._process_includes(data["includes"])
-            await self.on_includes(includes)
-        if "errors" in data:
-            errors = data["errors"]
-            await self.on_errors(errors)
-        if "matching_rules" in data:
-            matching_rules = [
-                StreamRule(id=rule["id"], tag=rule["tag"])
-                for rule in data["matching_rules"]
-            ]
-            await self.on_matching_rules(matching_rules)
-
-        await self.on_response(
-            StreamResponse(tweet, includes, errors, matching_rules)
-        )
+        pass
 
     async def on_tweet(self, tweet):
         """|coroutine|
@@ -614,7 +427,7 @@ class AsyncStreamingClient(AsyncBaseClient, AsyncBaseStream):
         errors : dict
             The errors received
         """
-        log.error("Received errors: %s", errors)
+        pass
 
     async def on_matching_rules(self, matching_rules):
         """|coroutine|
@@ -638,4 +451,4 @@ class AsyncStreamingClient(AsyncBaseClient, AsyncBaseStream):
         response : StreamResponse
             The response received
         """
-        log.debug("Received response: %s", response)
+        pass
